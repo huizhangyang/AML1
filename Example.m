@@ -24,29 +24,35 @@ close all
 clc
 
 n = 128;
-m=3*n;
+m=4*n;
 k = 4;
 lambda = 0.2;
 SNR=10000; 
-maxIter = 150;%Max iterations of AM algorithm
+maxIter = 300;%Max iterations of AM algorithm
 trials = 50; %Number of retrieval experiments for xt
-tol = 10^(-8);
-previousError = ones(maxIter,1);
+failures = 0;
+bestError = ones(maxIter,1);
 bestError = ones(maxIter,1);
 rng(555)
 measType = "linear";
 j=0;
 [A,At,xt,c]=buildSparsePhaseProblem(m,n,k,SNR, false,measType);
-disp('Running Sparse Phase Retrieval using AML1...')
-while ((j < trials) && (bestError(maxIter) > tol))
-[xk,reconError] = AML1(n,m,k,maxIter,A,At,xt,c,lambda,isComplex);
-if reconError < previousError
+fprintf('Running phase retrieval (AML1) for a k=%d sparse signal of length n=%d...\n',k,n)
+tic;
+while ((j < trials))
+    
+[xk,reconError] = AML1(n,m,k,maxIter,A,At,xt,c,lambda,'false');
+if reconError(maxIter) < bestError(maxIter)
     xbest = xk; 
     bestError = reconError;
 end
-previousError = reconError;
+if(reconError(maxIter) > 0.1)
+   failures = failures+1; 
+end
+fprintf('Reconstruction Error for trial %d: %d.\n', j+1,reconError(maxIter))
 j=j+1;
 end
+TIME = toc;
 figure(2);subplot(3,1,1)
 plot(linspace(-10,10),linspace(-10,10), 'r-')
 hold on
@@ -54,8 +60,9 @@ plot(xbest,xt, 'bo');
 ylabel('xt (True signal)')
 xlabel('xk (Reconstructed signal)')
 subplot(3,1,2)
-Residual = bestError(maxIter)
-
+fprintf('Lowest reconstruction error over %d trials is: %d\n',trials, bestError(maxIter))
+fprintf('Computation time: %d.\n',TIME)
+fprintf('Number of failures: %d.\n', failures)
  ls = 1:1:length(bestError);
  plot(ls,bestError,'.')
  xlabel('Iteration number')
